@@ -4,13 +4,19 @@ from sklearn.metrics import accuracy_score
 from utils import Progbar
 import activations
 
+class variable(object):
+    def __init__(self):
+        self.value = None
+        self.grad = None
+
 class layer(object):
     def __init__(self, input_dim, output_dim, activation="sigmoid"):
         l_val = np.sqrt(6) / (np.sqrt(input_dim + output_dim))
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.W = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
-        self.b = np.ones((1, output_dim))
+        self.parameters = {"W": variable(), "b": variable()}
+        self.parameters["W"].value = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
+        self.parameters["b"].value = np.ones((1, output_dim))
         if not hasattr(activations, activation):
             print "No support currently for activation %s. Defaulting to linear " % (activation)
             self. activation = getattr(activations, 'linear')
@@ -19,12 +25,16 @@ class layer(object):
 
     def update_params(self):
         lr = 0.001
-        self.W = self.W - (lr * self.grad_w)
-        self.b = self.b - (lr * self.grad_b)
+        for param in self.parameters:
+            self.parameters[param].value -= (lr * self.parameters[param].grad)
+        # self.W = self.W - (lr * self.grad_w)
+        # self.b = self.b - (lr * self.grad_b)
 
     def zero_grads(self):
-        self.grad_w = 0.
-        self.grad_b = 0.
+        for param in self.parameters:
+            self.parameters[param].grad = 0.
+        # self.grad_w = 0.
+        # self.grad_b = 0.
 
     def forward(self, input_tensor):
         '''
@@ -33,7 +43,7 @@ class layer(object):
             output_tensor : batch_size x output_dim
         '''
         self.input = input_tensor
-        self.z = np.dot(input_tensor, self.W) + self.b  # batch_size x output_dim
+        self.z = np.dot(input_tensor, self.parameters["W"].value) + self.parameters["b"].value  # batch_size x output_dim
         return self.activation(self.z)
 
     def backward(self, output_gradient):
@@ -58,9 +68,9 @@ class layer(object):
             print "Warning %s activation not found. Defaulting to linear " % (self.activation.__name__)
             activation_grad = output_gradient
         # Now compute the gradients of w and b and store those
-        self.grad_w = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
-        self.grad_b = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
-        return np.dot(activation_grad, self.W.transpose())
+        self.parameters["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
+        self.parameters["b"].grad = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
+        return np.dot(activation_grad, self.parameters["W"].value.transpose())
 
     def __call__(self, input_tensor):
         return self.forward(input_tensor)

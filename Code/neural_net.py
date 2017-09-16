@@ -2,27 +2,7 @@ import numpy as np
 import copy
 from sklearn.metrics import accuracy_score
 from utils import Progbar
-
-def sigmoid(x):
-    return 1. / (1. + np.exp(-x))
-
-
-def sigmoid_grad(x):
-    return sigmoid(x) * (1. - sigmoid(x))
-
-
-def relu(x):
-    return np.maximum(0., x)
-
-
-def softmax(x):
-    e_x = np.exp(x - np.max(x, axis=-1).reshape(x.shape[0], 1))
-    return e_x / np.sum(e_x, axis=1).reshape(e_x.shape[0], 1)
-
-
-def softmax_grad(x):
-    return softmax(x) * (1. - softmax(x))
-
+import activations
 
 class layer(object):
     def __init__(self, input_dim, output_dim, activation="sigmoid"):
@@ -31,7 +11,11 @@ class layer(object):
         self.output_dim = output_dim
         self.W = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
         self.b = np.ones((1, output_dim))
-        self.activation = activation
+        if not hasattr(activations, activation):
+            print "No support currently for activation %s. Defaulting to linear " % (activation)
+            self. activation = getattr(activations, 'linear')
+        else:
+            self.activation = getattr(activations, activation)
 
     def update_params(self):
         lr = 0.001
@@ -50,15 +34,7 @@ class layer(object):
         '''
         self.input = input_tensor
         self.z = np.dot(input_tensor, self.W) + self.b  # batch_size x output_dim
-        if self.activation == "sigmoid":
-            self.a = sigmoid(self.z)
-        elif self.activation == "relu":
-            self.a = relu(self.z)
-        elif self.activation == "softmax":
-            self.a = softmax(self.z)
-        else:
-            pass
-        return self.a
+        return self.activation(self.z)
 
     def backward(self, output_gradient):
         '''
@@ -67,20 +43,24 @@ class layer(object):
             returns the gradient w.r.t current node
         '''
         # Step 1. Compute gradient wrt the activation
-        if self.activation == "sigmoid":
-            self.activation_grad = output_gradient * sigmoid_grad(self.z)
-        elif self.activation == "relu":
-            self.activation_grad = copy.deepcopy(output_gradient)
-            self.activation_grad[self.z < 0.] = 0.
-        elif self.activation == "softmax":
-            self.activation_grad = output_gradient
+        if self.activation.__name__ == "sigmoid":
+            activation_grad = output_gradient * self.activation(self.z) * (1. - self.activation(self.z))
+        elif self.activation.__name__ == "relu":
+            activation_grad = output_gradient
+            activation_grad[self.z < 0.] = 0.
+        elif self.activation.__name__ == "tanh":
+            activation_grad = output_gradient * (1. - (self.activation(self.z)**2))
+        elif self.activation.__name__ == "softmax":
+            activation_grad = output_gradient
+        elif self.activation.__name__ == "linear":
+            activation_grad = output_gradient
         else:
-            pass
+            print "Warning %s activation not found. Defaulting to linear " % (self.activation.__name__)
+            activation_grad = output_gradient
         # Now compute the gradients of w and b and store those
-        self.grad_w = np.dot(self.input.transpose(), self.activation_grad) / output_gradient.shape[0]
-        # self.grad_b = np.dot(self.activation_grad.transpose(), np.ones(output_gradient.shape[0], 1)) / output_gradient.shape[0]
-        self.grad_b = np.sum(self.activation_grad, axis=0) / output_gradient.shape[0]
-        return np.dot(self.activation_grad, self.W.transpose())
+        self.grad_w = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
+        self.grad_b = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
+        return np.dot(activation_grad, self.W.transpose())
 
     def __call__(self, input_tensor):
         return self.forward(input_tensor)

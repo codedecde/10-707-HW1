@@ -1,40 +1,32 @@
 import numpy as np
-import copy
 from sklearn.metrics import accuracy_score
 from utils import Progbar
+import pdb
 import activations
+from optimizers import optimizer
+
 
 class variable(object):
     def __init__(self):
         self.value = None
         self.grad = None
+    def __str__(self):
+        return "Value : %s\nGradient: %s" % (str(self.value), str(self.grad))
+
 
 class layer(object):
     def __init__(self, input_dim, output_dim, activation="sigmoid"):
         l_val = np.sqrt(6) / (np.sqrt(input_dim + output_dim))
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.parameters = {"W": variable(), "b": variable()}
-        self.parameters["W"].value = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
-        self.parameters["b"].value = np.ones((1, output_dim))
+        self.params = {"W": variable(), "b": variable()}
+        self.params["W"].value = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
+        self.params["b"].value = np.ones((1, output_dim))
         if not hasattr(activations, activation):
             print "No support currently for activation %s. Defaulting to linear " % (activation)
             self. activation = getattr(activations, 'linear')
         else:
             self.activation = getattr(activations, activation)
-
-    def update_params(self):
-        lr = 0.001
-        for param in self.parameters:
-            self.parameters[param].value -= (lr * self.parameters[param].grad)
-        # self.W = self.W - (lr * self.grad_w)
-        # self.b = self.b - (lr * self.grad_b)
-
-    def zero_grads(self):
-        for param in self.parameters:
-            self.parameters[param].grad = 0.
-        # self.grad_w = 0.
-        # self.grad_b = 0.
 
     def forward(self, input_tensor):
         '''
@@ -43,7 +35,7 @@ class layer(object):
             output_tensor : batch_size x output_dim
         '''
         self.input = input_tensor
-        self.z = np.dot(input_tensor, self.parameters["W"].value) + self.parameters["b"].value  # batch_size x output_dim
+        self.z = np.dot(input_tensor, self.params["W"].value) + self.params["b"].value  # batch_size x output_dim
         return self.activation(self.z)
 
     def backward(self, output_gradient):
@@ -68,38 +60,51 @@ class layer(object):
             print "Warning %s activation not found. Defaulting to linear " % (self.activation.__name__)
             activation_grad = output_gradient
         # Now compute the gradients of w and b and store those
-        self.parameters["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
-        self.parameters["b"].grad = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
-        return np.dot(activation_grad, self.parameters["W"].value.transpose())
+        self.params["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
+        self.params["b"].grad = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
+        return np.dot(activation_grad, self.params["W"].value.transpose())
 
     def __call__(self, input_tensor):
         return self.forward(input_tensor)
 
 
 class neural_net(object):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        self.hidden_layer = layer(input_dim, hidden_dim, "relu")
-        self.output_layer = layer(hidden_dim, output_dim, "softmax")
+    def __init__(self, input_dims, layers_info):
+        self.layers_info = layers_info
+        self.num_layers = len(layers_info)
+        self.params = {}
+        for ix in xrange(len(layers_info)):
+            if ix == 0:
+                input_dim = input_dims
+            else:
+                input_dim = layers_info[ix - 1][1]
+            output_dim = layers_info[ix][1]
+            layer_object = layer(input_dim, output_dim, layers_info[ix][2])
+            self.params[layers_info[ix][0]] = layer_object.params
+            setattr(self, 'layer_{}'.format(ix), layer_object)
+        self.optimizer = optimizer(self.params, 'binary_cross_entropy', lr=0.001, l2_penalty=0)
+
+    def forward_prop(self, input_tensor):
+        output = input_tensor
+        for ix in xrange(self.num_layers):
+            output = getattr(self, 'layer_{}'.format(ix))(output)
+        return output
+
+    def backward_prop(self, loss_grad):
+        back_grad = loss_grad
+        for ix in xrange(self.num_layers - 1, -1, -1):
+            back_grad = getattr(self, 'layer_{}'.format(ix)).backward(back_grad)
 
     def train_batch(self, X, y):
-        # Forward Propagation
-        hidden_rep = self.hidden_layer(X)
-        output = self.output_layer(hidden_rep)
-        loss = -1. * (y * np.log(output))
-        loss = np.sum(np.sum(loss)) / y.shape[1]
-        # Backward Propagation
-        # error_grad = y * -1. / (output)  # batch x num_classes
-        error_grad = (output - y)
-        mid_grad = self.output_layer.backward(error_grad)  # batch x hidden_dim
-        start_grad = self.hidden_layer.backward(mid_grad)  # batch x input_dim
-        # Now update the weights
-        self.hidden_layer.update_params()
-        self.output_layer.update_params()
+        self.optimizer.zero_grads()
+        output = self.forward_prop(X)
+        loss, loss_grad = self.optimizer.loss(y, output)
+        self.backward_prop(loss_grad)
+        self.optimizer.step()
         return loss
 
     def predict(self, X):
-        hidden_rep = self.hidden_layer(X)
-        output = self.output_layer(hidden_rep)
+        output = self.forward_prop(X)
         output = np.argmax(output, axis=-1)
         return output
 
@@ -118,8 +123,8 @@ class neural_net(object):
             for ix in xrange(0, X.shape[0], batch_size):
                 batch_x = X[ix: ix + batch_size]
                 batch_y = y[ix: ix + batch_size]
-                self.hidden_layer.zero_grads()
-                self.output_layer.zero_grads()
+                # self.hidden_layer.zero_grads()
+                # self.output_layer.zero_grads()
                 loss = self.train_batch(batch_x, batch_y)
                 losses.append(loss)
                 preds = self.predict(X_val)
@@ -141,5 +146,6 @@ if __name__ == "__main__":
     val_file = "Data/digitsvalid.txt"
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
-    nn = neural_net(train_x.shape[1], 100, 10)
+    layer_info = [("hidden", 100, "relu"), ("output", 10, "sigmoid")]
+    nn = neural_net(train_x.shape[1], layer_info)
     nn.fit(train_x, train_y, val_x, val_y)

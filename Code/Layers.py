@@ -70,3 +70,49 @@ class DenseLayer(object):
 
     def __call__(self, input_tensor, test=False):
         return self.forward(input_tensor, test)
+
+
+class BatchNormLayer(object):
+    def __init__(self, n_dim, epsilon=0.001):
+        self.n_dim = n_dim
+        self.params = {"gamma": Variable(), "beta": Variable()}
+        self.params["gamma"].value = np.ones((1, n_dim))
+        self.params["beta"].value = np.ones((1, n_dim))
+        self.buffers = {}
+        self.buffers["mu"] = np.ones((1, n_dim))
+        self.buffers["sigma"] = np.ones((1, n_dim))
+        self.sum_of_squares = np.ones((1, n_dim))
+        self.count = 0.
+        self.epsilon = epsilon
+
+    def forward(self, input_tensor, test=False):
+        '''
+            input_tensor : batch x n_dim
+            Returns a tensor of form batch x n_dim
+        '''
+        if not test:
+            batch_mu = np.sum(input_tensor, axis=0)  # 1 x n_dim
+            batch_sum_of_squares = np.sum(input_tensor * input_tensor, axis=0)
+            self.buffers["mu"] = ((self.buffers["mu"] * self.count) + batch_mu) / (self.count + input_tensor.shape[0])
+            self.sum_of_squares = ((self.sum_of_squares * self.count) + batch_sum_of_squares) / (self.count + input_tensor.shape[0])
+            self.count += input_tensor.shape[0]
+            self.buffers["sigma"] = self.sum_of_squares - (self.buffers["mu"] * self.buffers["mu"])
+        self.numerator = (input_tensor - self.buffers["mu"])
+        self.denominator = self.buffers["sigma"] + self.epsilon
+        self.input_tensor_hat = self.numerator / (np.sqrt(self.denominator))
+        return (self.input_tensor_hat * self.params["gamma"].value) + self.params["beta"].value
+
+    def backward(self, output_gradient):
+        '''
+            output_gradient : batch x n_dim
+            Returns a tensor of form batch x n_dim, computing the gradient wrt current function
+            Also updates gradients for gamma and mu
+        '''
+        self.params["beta"].grad = np.sum(output_gradient, axis=0) / output_gradient.shape[0]
+        self.params["gamma"].grad = np.sum(self.input_tensor_hat * output_gradient, axis=0) / output_gradient.shape[0]
+        retval = (1. / output_gradient.shape[0]) * self.params["gamma"].value / (np.sqrt(self.denominator))
+        retval = ((output_gradient.shape[0] * output_gradient) - np.sum(output_gradient, axis=0) - (self.numerator / self.denominator * np.sum(output_gradient * self.numerator, axis=0))) * retval
+        return retval
+
+    def __call__(self, input_tensor, test=False):
+        return self.forward(input_tensor, test)

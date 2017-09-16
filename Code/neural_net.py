@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from utils import Progbar
 from optimizers import optimizer
-from Layers import DenseLayer
+from Layers import DenseLayer, BatchNormLayer
 
 
 class neural_net(object):
@@ -16,7 +16,10 @@ class neural_net(object):
             else:
                 input_dim = layers_info[ix - 1][1]
             output_dim = layers_info[ix][1]
-            layer_object = DenseLayer(input_dim, output_dim, layers_info[ix][2], dropout=layer_info[ix][3])
+            if layer_info[ix][0] != "batchnorm":
+                layer_object = DenseLayer(input_dim, output_dim, layers_info[ix][2], dropout=layer_info[ix][3])
+            else:
+                layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0]] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
         self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=0.001, l2_penalty=0)
@@ -81,6 +84,6 @@ if __name__ == "__main__":
     val_file = "Data/digitsvalid.txt"
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
-    layer_info = [("hidden", 100, "relu",0.5), ("output", 10, "softmax", 1.)]
+    layer_info = [("hidden", 100, "relu",0.5), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
     nn = neural_net(train_x.shape[1], layer_info)
     nn.fit(train_x, train_y, val_x, val_y)

@@ -2,11 +2,13 @@ import numpy as np
 
 
 class optimizer(object):
-    def __init__(self, params, loss_type, lr=0.001, l2_penalty=0.):
+    def __init__(self, params, loss_type, lr=0.001, l2_penalty=0., momentum=0.):
         self.params = params
         self.loss_type = loss_type
         self.lr = lr
         self.l2_penalty = l2_penalty
+        self.momentum = momentum
+        self.previous_grad = None
 
     def loss(self, y, output):
         if self.loss_type == 'categorical_cross_entropy':
@@ -31,9 +33,27 @@ class optimizer(object):
                 self.params[name][weight].grad = 0.
 
     def step(self):
-        for name in self.params:
-            for weight in self.params[name]:
-                if weight != 'b':
-                    self.params[name][weight].value -= ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
-                else:
-                    self.params[name][weight].value -= (self.lr * self.params[name][weight].grad)
+        if self.previous_grad is None:
+            self.previous_grad = {}
+            for name in self.params:
+                self.previous_grad[name] = {}
+                for weight in self.params[name]:
+                    if weight != 'b':
+                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
+                        self.previous_grad[name][weight] = gradient                        
+                        self.params[name][weight].value -= gradient
+                    else:
+                        gradient = (self.lr * self.params[name][weight].grad)
+                        self.previous_grad[name][weight] = gradient
+                        self.params[name][weight].value -= gradient
+        else:
+            for name in self.params:
+                for weight in self.params[name]:
+                    if weight != 'b':
+                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value)) 
+                        gradient += self.momentum * self.previous_grad[name][weight]
+                        self.params[name][weight].value -= gradient
+                    else:
+                        gradient = (self.lr * self.params[name][weight].grad)
+                        gradient += self.momentum * self.previous_grad[name][weight]
+                        self.params[name][weight].value -= gradient

@@ -49,14 +49,12 @@ class neural_net(object):
         output = np.argmax(output, axis=-1)
         return output
 
-    def fit(self, X, y, X_val, y_val):
+    def fit(self, X, y, X_val, y_val, n_epochs=2000, batch_size=50):
         # Shuffle the training data
         index = np.arange(X.shape[0])
         np.random.shuffle(index)
         X = X[index]
         y = y[index]
-        batch_size = 50
-        n_epochs = 2000
         y_val = np.argmax(y_val, axis=-1)
         bar = Progbar(n_epochs)
         for epoch in xrange(n_epochs):

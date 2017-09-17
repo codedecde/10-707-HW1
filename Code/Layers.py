@@ -58,6 +58,7 @@ class DenseLayer(object):
         elif self.activation.__name__ == "tanh":
             activation_grad = output_gradient * (1. - (self.activation(self.z)**2))
         elif self.activation.__name__ == "softmax":
+            # This is a special case. It is easier to precompute the gradient wrt the activation and send it below
             activation_grad = output_gradient
         elif self.activation.__name__ == "linear":
             activation_grad = output_gradient

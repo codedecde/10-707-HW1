@@ -40,7 +40,7 @@ class optimizer(object):
                 for weight in self.params[name]:
                     if weight != 'b':
                         gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
-                        self.previous_grad[name][weight] = gradient                        
+                        self.previous_grad[name][weight] = gradient
                         self.params[name][weight].value -= gradient
                     else:
                         gradient = (self.lr * self.params[name][weight].grad)
@@ -50,7 +50,7 @@ class optimizer(object):
             for name in self.params:
                 for weight in self.params[name]:
                     if weight != 'b':
-                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value)) 
+                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
                         gradient += self.momentum * self.previous_grad[name][weight]
                         self.params[name][weight].value -= gradient
                     else:

@@ -3,7 +3,7 @@ from sklearn.metrics import accuracy_score
 from utils import Progbar
 from optimizers import optimizer
 from Layers import DenseLayer, BatchNormLayer
-
+np.random.seed(1234)
 
 class neural_net(object):
     def __init__(self, input_dims, layers_info):
@@ -22,7 +22,7 @@ class neural_net(object):
                 layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0]] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
-        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=0.001, l2_penalty=0)
+        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=0.1, l2_penalty=0)
 
     def forward_prop(self, input_tensor, test=False):
         output = input_tensor
@@ -55,7 +55,7 @@ class neural_net(object):
         X = X[index]
         y = y[index]
         batch_size = 50
-        n_epochs = 200
+        n_epochs = 2000
         y_val = np.argmax(y_val, axis=-1)
         bar = Progbar(n_epochs)
         for epoch in xrange(n_epochs):
@@ -84,6 +84,8 @@ if __name__ == "__main__":
     val_file = "Data/digitsvalid.txt"
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
-    layer_info = [("hidden", 100, "relu",0.5), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
+    # layer_info = [("hidden", 100, "relu", 0.5), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
+    layer_info = [("hidden", 100, "relu", 1.), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
+    # layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
     nn = neural_net(train_x.shape[1], layer_info)
     nn.fit(train_x, train_y, val_x, val_y)

@@ -1,5 +1,6 @@
 import numpy as np
 import activations
+import pdb
 
 
 class Variable(object):
@@ -75,13 +76,14 @@ class DenseLayer(object):
 class BatchNormLayer(object):
     def __init__(self, n_dim, epsilon=0.001):
         self.n_dim = n_dim
+        l_val = np.sqrt(6) / (np.sqrt(n_dim + n_dim))
         self.params = {"gamma": Variable(), "beta": Variable()}
-        self.params["gamma"].value = np.ones((1, n_dim))
-        self.params["beta"].value = np.ones((1, n_dim))
+        self.params["gamma"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
+        self.params["beta"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
         self.buffers = {}
-        self.buffers["mu"] = np.ones((1, n_dim))
-        self.buffers["sigma"] = np.ones((1, n_dim))
-        self.sum_of_squares = np.ones((1, n_dim))
+        self.buffers["mu"] = np.zeros((1, n_dim))
+        self.buffers["sigma"] = np.zeros((1, n_dim))
+        self.sum_of_squares = np.zeros((1, n_dim))
         self.count = 0.
         self.epsilon = epsilon
 
@@ -110,9 +112,11 @@ class BatchNormLayer(object):
         '''
         self.params["beta"].grad = np.sum(output_gradient, axis=0) / output_gradient.shape[0]
         self.params["gamma"].grad = np.sum(self.input_tensor_hat * output_gradient, axis=0) / output_gradient.shape[0]
-        retval = (1. / output_gradient.shape[0]) * self.params["gamma"].value / (np.sqrt(self.denominator))
-        retval = ((output_gradient.shape[0] * output_gradient) - np.sum(output_gradient, axis=0) - (self.numerator / self.denominator * np.sum(output_gradient * self.numerator, axis=0))) * retval
-        return retval
+        grad_input_tensor_hat = output_gradient * self.params["gamma"].value  # batch x n_dim
+        grad_sigma = np.sum(grad_input_tensor_hat * self.numerator * -.5 * (self.denominator ** (-3/2)), axis=0)
+        grad_mu = np.sum(grad_input_tensor_hat * -1 * (self.denominator ** (-1/2)), axis=0) + (grad_sigma / output_gradient.shape[0] * -2. * np.sum(self.numerator, axis=0))
+        grad_input = (grad_input_tensor_hat * (self.denominator ** (-1/2))) + (grad_sigma * 2. / output_gradient.shape[0] * self.numerator) + (1. / output_gradient.shape[0] * grad_mu)
+        return grad_input
 
     def __call__(self, input_tensor, test=False):
         return self.forward(input_tensor, test)

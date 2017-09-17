@@ -8,7 +8,7 @@ class optimizer(object):
         self.lr = lr
         self.l2_penalty = l2_penalty
         self.momentum = momentum
-        self.previous_grad = None
+        self.velocity = None
 
     def loss(self, y, output):
         if self.loss_type == 'categorical_cross_entropy':
@@ -33,27 +33,27 @@ class optimizer(object):
                 self.params[name][weight].grad = 0.
 
     def step(self):
-        if self.previous_grad is None:
-            self.previous_grad = {}
+        if self.velocity is None:
+            self.velocity = {}
             for name in self.params:
-                self.previous_grad[name] = {}
+                self.velocity[name] = {}
                 for weight in self.params[name]:
                     if weight != 'b':
                         gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
-                        self.previous_grad[name][weight] = gradient
-                        self.params[name][weight].value -= gradient
+                        self.velocity[name][weight] = gradient
+                        self.params[name][weight].value -= self.velocity[name][weight]
                     else:
                         gradient = (self.lr * self.params[name][weight].grad)
-                        self.previous_grad[name][weight] = gradient
-                        self.params[name][weight].value -= gradient
+                        self.velocity[name][weight] = gradient
+                        self.params[name][weight].value -= self.velocity[name][weight]
         else:
             for name in self.params:
                 for weight in self.params[name]:
                     if weight != 'b':
                         gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
-                        gradient += self.momentum * self.previous_grad[name][weight]
-                        self.params[name][weight].value -= gradient
+                        self.velocity[name][weight] = (self.momentum * self.velocity[name][weight]) + gradient
+                        self.params[name][weight].value -= self.velocity[name][weight]
                     else:
                         gradient = (self.lr * self.params[name][weight].grad)
-                        gradient += self.momentum * self.previous_grad[name][weight]
-                        self.params[name][weight].value -= gradient
+                        self.velocity[name][weight] = (self.momentum * self.velocity[name][weight]) + gradient
+                        self.params[name][weight].value -= self.velocity[name][weight]

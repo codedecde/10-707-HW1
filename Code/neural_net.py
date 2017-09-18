@@ -3,6 +3,8 @@ from sklearn.metrics import accuracy_score
 from utils import Progbar
 from optimizers import optimizer
 from Layers import DenseLayer, BatchNormLayer
+from copy import deepcopy
+import pdb
 np.random.seed(1234)
 
 
@@ -23,7 +25,7 @@ class neural_net(object):
                 layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0] + "_{}".format(ix)] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
-        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=0.1, l2_penalty=0)
+        self.optimizer = optimizer(self.params, 'binary_cross_entropy', lr=0.1, l2_penalty=0)
 
     def forward_prop(self, input_tensor, test=False):
         output = input_tensor
@@ -36,11 +38,25 @@ class neural_net(object):
         for ix in xrange(self.num_layers - 1, -1, -1):
             back_grad = getattr(self, 'layer_{}'.format(ix)).backward(back_grad)
 
-    def train_batch(self, X, y):
+
+    def check_gradient(self, layer_name, param_name, index_i, index_j, X, y, eps=0.0001):
         self.optimizer.zero_grads()
-        output = self.forward_prop(X)
-        loss, loss_grad = self.optimizer.loss(y, output)
+        old_params = deepcopy(self.params[layer_name][param_name].value)
+        loss, loss_grad = self.optimizer.loss(y, self.forward_prop(X))
         self.backward_prop(loss_grad)
+        # Now computing f(W + epsilon)
+        self.params[layer_name][param_name].value[index_i][index_j] = old_params[index_i][index_j] + eps
+        loss_positive, _ = self.optimizer.loss(y, self.forward_prop(X))
+        self.params[layer_name][param_name].value[index_i][index_j] = old_params[index_i][index_j] - eps
+        loss_negative, _ = self.optimizer.loss(y, self.forward_prop(X))
+        numerical_gradient = (loss_positive - loss_negative) / (2 * eps)
+        actual_gradient = self.params[layer_name][param_name].grad[index_i][index_j]
+        self.params[layer_name][param_name].value = old_params
+        return abs(numerical_gradient - actual_gradient) / abs(numerical_gradient + actual_gradient), loss
+
+    def train_batch(self, X, y):
+        val, loss = self.check_gradient("output_1", "b", 0, 1, X, y)
+        # print val
         self.optimizer.step()
         return loss
 
@@ -49,7 +65,7 @@ class neural_net(object):
         output = np.argmax(output, axis=-1)
         return output
 
-    def fit(self, X, y, X_val, y_val, n_epochs=2000, batch_size=50):
+    def fit(self, X, y, X_val, y_val, n_epochs=2000, batch_size=1):
         # Shuffle the training data
         index = np.arange(X.shape[0])
         np.random.shuffle(index)
@@ -84,7 +100,8 @@ if __name__ == "__main__":
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
     # layer_info = [("hidden", 100, "relu", 0.5), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
-    layer_info = [("hidden", 100, "tanh", .5), ("batchnorm", 100), ("hidden", 100, "tanh", .5), ("batchnorm", 100), ("output", 10, "softmax", 1.)]
+    layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "sigmoid", 1.)]
+    # layer_info = [("hidden", 100, "tanh", .5), ("batchnorm", 100), ("hidden", 100, "tanh", .5), ("batchnorm", 100), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", .5), ("hidden", 100, "relu", .5), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
     nn = neural_net(train_x.shape[1], layer_info)

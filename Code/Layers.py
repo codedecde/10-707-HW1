@@ -67,7 +67,7 @@ class DenseLayer(object):
             activation_grad = output_gradient
         # Now compute the gradients of w and b and store those
         self.params["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
-        self.params["b"].grad = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
+        self.params["b"].grad = (np.sum(activation_grad, axis=0) / output_gradient.shape[0]).reshape(self.params["b"].value.shape)
         return np.dot(activation_grad, self.params["W"].value.transpose())
 
     def __call__(self, input_tensor, test=False):
@@ -111,8 +111,8 @@ class BatchNormLayer(object):
             Returns a tensor of form batch x n_dim, computing the gradient wrt current function
             Also updates gradients for gamma and mu
         '''
-        self.params["beta"].grad = np.sum(output_gradient, axis=0) / output_gradient.shape[0]
-        self.params["gamma"].grad = np.sum(self.input_tensor_hat * output_gradient, axis=0) / output_gradient.shape[0]
+        self.params["beta"].grad = (np.sum(output_gradient, axis=0) / output_gradient.shape[0]).reshape(self.params["beta"].value.shape)
+        self.params["gamma"].grad = (np.sum(self.input_tensor_hat * output_gradient, axis=0) / output_gradient.shape[0]).reshape(self.params["gamma"].value.shape)
         grad_input_tensor_hat = output_gradient * self.params["gamma"].value  # batch x n_dim
         grad_sigma = np.sum(grad_input_tensor_hat * self.numerator * -.5 * (self.denominator ** (-3/2)), axis=0)
         grad_mu = np.sum(grad_input_tensor_hat * -1 * (self.denominator ** (-1/2)), axis=0) + (grad_sigma / output_gradient.shape[0] * -2. * np.sum(self.numerator, axis=0))

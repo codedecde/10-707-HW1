@@ -24,7 +24,7 @@ class optimizer(object):
             print "Error %s not supported. Reverting to categorical_cross_entropy" % (self.loss_type)
             loss = -1. * (y * np.log(output))
             loss_grad = (output - y)
-        loss = np.sum(np.sum(loss)) / y.shape[1]
+        loss = np.sum(np.sum(loss)) / y.shape[0]
         return loss, loss_grad
 
     def zero_grads(self):

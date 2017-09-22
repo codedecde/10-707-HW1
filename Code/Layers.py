@@ -75,18 +75,19 @@ class DenseLayer(object):
 
 
 class BatchNormLayer(object):
-    def __init__(self, n_dim, epsilon=0.001):
+    def __init__(self, n_dim, epsilon=0.001, alpha=0.9):
         self.n_dim = n_dim
         l_val = np.sqrt(6) / (np.sqrt(n_dim + n_dim))
         self.params = {"gamma": Variable(), "beta": Variable()}
         self.params["gamma"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
         self.params["beta"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
         self.buffers = {}
-        self.buffers["mu"] = np.zeros((1, n_dim))
-        self.buffers["sigma"] = np.zeros((1, n_dim))
-        self.sum_of_squares = np.zeros((1, n_dim))
-        self.count = 0.
+        self.buffers["batch_mu"] = np.zeros((1, n_dim))
+        self.buffers["batch_var"] = np.zeros((1, n_dim))
+        self.buffers["mu"] = np.zeros((1, n_dim))  # The running average for mean
+        self.buffers["var"] = np.zeros((1, n_dim))  # The running average for variance
         self.epsilon = epsilon
+        self.alpha = alpha
 
     def forward(self, input_tensor, test=False):
         '''
@@ -94,16 +95,18 @@ class BatchNormLayer(object):
             Returns a tensor of form batch x n_dim
         '''
         if not test:
-            batch_mu = np.sum(input_tensor, axis=0)  # 1 x n_dim
-            batch_sum_of_squares = np.sum(input_tensor * input_tensor, axis=0)
-            self.buffers["mu"] = ((self.buffers["mu"] * self.count) + batch_mu) / (self.count + input_tensor.shape[0])
-            self.sum_of_squares = ((self.sum_of_squares * self.count) + batch_sum_of_squares) / (self.count + input_tensor.shape[0])
-            self.count += input_tensor.shape[0]
-            self.buffers["sigma"] = self.sum_of_squares - (self.buffers["mu"] * self.buffers["mu"])
-        self.numerator = (input_tensor - self.buffers["mu"])
-        self.denominator = self.buffers["sigma"] + self.epsilon
-        self.input_tensor_hat = self.numerator / (np.sqrt(self.denominator))
-        return (self.input_tensor_hat * self.params["gamma"].value) + self.params["beta"].value
+            self.buffers["batch_mu"] = (np.sum(input_tensor, axis=0)) / (input_tensor.shape[0])
+            self.buffers["mu"] = (1. - self.alpha) * self.buffers["mu"] + (self.alpha * self.buffers["batch_mu"])
+            self.buffers["batch_var"] = (np.sum(input_tensor ** 2, axis=0) / input_tensor.shape[0]) - (self.buffers["batch_mu"] ** 2)
+            self.buffers["var"] = (1. - self.alpha) * self.buffers["var"] + (self.alpha * self.buffers["batch_var"])
+        else:
+            self.buffers["batch_mu"] = self.buffers["mu"]
+            self.buffers["batch_var"] = self.buffers["var"]
+        self.x_minus_mu = input_tensor - self.buffers["batch_mu"]
+        self.var_plus_eps = self.buffers["batch_var"] + self.epsilon
+        self.x_hat = self.x_minus_mu / np.sqrt(self.var_plus_eps)
+        output_tensor = (self.x_hat * self.params["gamma"].value) + self.params["beta"].value
+        return output_tensor
 
     def backward(self, output_gradient):
         '''

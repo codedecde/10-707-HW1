@@ -82,8 +82,6 @@ class BatchNormLayer(object):
         self.params["gamma"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
         self.params["beta"].value = np.random.uniform(low=-l_val, high=l_val, size=(1, n_dim))
         self.buffers = {}
-        self.buffers["batch_mu"] = np.zeros((1, n_dim))
-        self.buffers["batch_var"] = np.zeros((1, n_dim))
         self.sum_of_squares = np.zeros((1, n_dim))
         self.count = 0.
         self.alpha = alpha
@@ -97,15 +95,15 @@ class BatchNormLayer(object):
             Returns a tensor of form batch x n_dim
         '''
         if not test:
-            self.buffers["batch_mu"] = np.sum(input_tensor, axis=0) / input_tensor.shape[0]
-            self.buffers["mu"] = self.alpha * self.buffers["mu"] + ((1. - self.alpha) * self.buffers["batch_mu"]) if self.buffers["mu"] is not None else self.buffers["batch_mu"]
-            self.buffers["batch_var"] = (np.sum(input_tensor ** 2, axis=0) / input_tensor.shape[0]) - (self.buffers["batch_mu"] ** 2)
-            self.buffers["var"] = self.alpha * self.buffers["var"] + ((1. - self.alpha) * self.buffers["batch_var"]) if self.buffers["var"] is not None else self.buffers["batch_var"]
+            batch_mu = np.sum(input_tensor, axis=0) / input_tensor.shape[0]
+            self.buffers["mu"] = self.alpha * self.buffers["mu"] + ((1. - self.alpha) * batch_mu) if self.buffers["mu"] is not None else batch_mu
+            batch_var = (np.sum(input_tensor ** 2, axis=0) / input_tensor.shape[0]) - (batch_mu ** 2)
+            self.buffers["var"] = self.alpha * self.buffers["var"] + ((1. - self.alpha) * batch_var) if self.buffers["var"] is not None else batch_var
         else:
-            self.buffers["batch_mu"] = self.buffers["mu"]
-            self.buffers["batch_var"] = self.buffers["var"]
-        self.x_minus_mu = input_tensor - self.buffers["batch_mu"]
-        self.var_plus_eps = self.buffers["batch_var"] + self.epsilon
+            batch_mu = self.buffers["mu"]
+            batch_var = self.buffers["var"]
+        self.x_minus_mu = input_tensor - batch_mu
+        self.var_plus_eps = batch_var + self.epsilon
         self.x_hat = self.x_minus_mu / np.sqrt(self.var_plus_eps)
         output_tensor = (self.x_hat * self.params["gamma"].value) + self.params["beta"].value
         return output_tensor

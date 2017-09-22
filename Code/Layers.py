@@ -67,7 +67,7 @@ class DenseLayer(object):
             activation_grad = output_gradient
         # Now compute the gradients of w and b and store those
         self.params["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
-        self.params["b"].grad = np.sum(activation_grad, axis=0) / output_gradient.shape[0]
+        self.params["b"].grad = (np.sum(activation_grad, axis=0) / output_gradient.shape[0]).reshape(self.params["b"].value.shape)
         return np.dot(activation_grad, self.params["W"].value.transpose())
 
     def __call__(self, input_tensor, test=False):
@@ -75,7 +75,7 @@ class DenseLayer(object):
 
 
 class BatchNormLayer(object):
-    def __init__(self, n_dim, epsilon=0.001, alpha=0.9):
+    def __init__(self, n_dim, epsilon=0.001):
         self.n_dim = n_dim
         l_val = np.sqrt(6) / (np.sqrt(n_dim + n_dim))
         self.params = {"gamma": Variable(), "beta": Variable()}
@@ -84,10 +84,9 @@ class BatchNormLayer(object):
         self.buffers = {}
         self.buffers["batch_mu"] = np.zeros((1, n_dim))
         self.buffers["batch_var"] = np.zeros((1, n_dim))
-        self.buffers["mu"] = np.zeros((1, n_dim))  # The running average for mean
-        self.buffers["var"] = np.zeros((1, n_dim))  # The running average for variance
+        self.sum_of_squares = np.zeros((1, n_dim))
+        self.count = 0.
         self.epsilon = epsilon
-        self.alpha = alpha
 
     def forward(self, input_tensor, test=False):
         '''
@@ -95,13 +94,9 @@ class BatchNormLayer(object):
             Returns a tensor of form batch x n_dim
         '''
         if not test:
-            self.buffers["batch_mu"] = (np.sum(input_tensor, axis=0)) / (input_tensor.shape[0])
-            self.buffers["mu"] = (1. - self.alpha) * self.buffers["mu"] + (self.alpha * self.buffers["batch_mu"])
+            self.buffers["batch_mu"] = np.sum(input_tensor, axis=0) / input_tensor.shape[0]
+            # self.buffers["batch_var"] = np.sum((input_tensor - self.buffers["batch_mu"]) * (input_tensor - self.buffers["batch_mu"]), axis=0) / input_tensor.shape[0]
             self.buffers["batch_var"] = (np.sum(input_tensor ** 2, axis=0) / input_tensor.shape[0]) - (self.buffers["batch_mu"] ** 2)
-            self.buffers["var"] = (1. - self.alpha) * self.buffers["var"] + (self.alpha * self.buffers["batch_var"])
-        else:
-            self.buffers["batch_mu"] = self.buffers["mu"]
-            self.buffers["batch_var"] = self.buffers["var"]
         self.x_minus_mu = input_tensor - self.buffers["batch_mu"]
         self.var_plus_eps = self.buffers["batch_var"] + self.epsilon
         self.x_hat = self.x_minus_mu / np.sqrt(self.var_plus_eps)
@@ -114,12 +109,15 @@ class BatchNormLayer(object):
             Returns a tensor of form batch x n_dim, computing the gradient wrt current function
             Also updates gradients for gamma and mu
         '''
-        self.params["beta"].grad = np.sum(output_gradient, axis=0) / output_gradient.shape[0]
-        self.params["gamma"].grad = np.sum(self.input_tensor_hat * output_gradient, axis=0) / output_gradient.shape[0]
+        self.params["beta"].grad = (np.sum(output_gradient, axis=0) / output_gradient.shape[0]).reshape(self.params["beta"].value.shape)
+        self.params["gamma"].grad = (np.sum(self.x_hat * output_gradient, axis=0) / output_gradient.shape[0]).reshape(self.params["beta"].value.shape)
         grad_input_tensor_hat = output_gradient * self.params["gamma"].value  # batch x n_dim
-        grad_sigma = np.sum(grad_input_tensor_hat * self.numerator * -.5 * (self.denominator ** (-3/2)), axis=0)
-        grad_mu = np.sum(grad_input_tensor_hat * -1 * (self.denominator ** (-1/2)), axis=0) + (grad_sigma / output_gradient.shape[0] * -2. * np.sum(self.numerator, axis=0))
-        grad_input = (grad_input_tensor_hat * (self.denominator ** (-1/2))) + (grad_sigma * 2. / output_gradient.shape[0] * self.numerator) + (1. / output_gradient.shape[0] * grad_mu)
+        grad_var = -1. * np.sum(grad_input_tensor_hat * (self.x_minus_mu / (2 * (self.var_plus_eps * np.sqrt(self.var_plus_eps)))), axis=0)
+        grad_mu = np.sum(grad_input_tensor_hat * (-1. / (np.sqrt(self.var_plus_eps))), axis=0)
+        grad_mu += ((grad_var / output_gradient.shape[0]) * -2. * np.sum(self.x_minus_mu, axis=0))
+        grad_input = (grad_input_tensor_hat / (np.sqrt(self.var_plus_eps)))
+        grad_input += (grad_var * (2. / output_gradient.shape[0]) * self.x_minus_mu)
+        grad_input += (grad_mu / output_gradient.shape[0])
         return grad_input
 
     def __call__(self, input_tensor, test=False):

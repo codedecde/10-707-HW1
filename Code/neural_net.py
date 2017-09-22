@@ -4,6 +4,7 @@ from utils import Progbar
 from optimizers import optimizer
 from Layers import DenseLayer, BatchNormLayer
 from copy import deepcopy
+import pdb
 np.random.seed(1234)
 
 
@@ -50,11 +51,21 @@ class neural_net(object):
         self.params[layer][param].value = original_params
         return num_grad
 
+    def test_layer_gradient(self, layer, param, X, y):
+        max_abs_difference = -1
+        for i in xrange(self.params[layer][param].value.shape[0]):
+            for j in xrange(self.params[layer][param].value.shape[1]):
+                num_gradient = self.compute_numerical_grad(layer, param, i, j, X, y)
+                abs_difference = abs(num_gradient - self.params[layer][param].grad[i][j]) / abs(num_gradient + self.params[layer][param].grad[i][j] + np.finfo(float).eps)
+                max_abs_difference = max(abs_difference, max_abs_difference)
+        return max_abs_difference
+
     def train_batch(self, X, y):
         self.optimizer.zero_grads()
         output = self.forward(X)
         loss, loss_grad = self.optimizer.loss(y, output)
         self.backward(loss_grad)
+        print self.test_layer_gradient('hidden_0', 'W', X, y)
         self.optimizer.step()
         return loss
 
@@ -101,7 +112,7 @@ if __name__ == "__main__":
     # layer_info = [("hidden", 100, "tanh", .5), ("batchnorm", 100), ("hidden", 100, "tanh", .5), ("batchnorm", 100), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 5, "relu", 1.), ("batchnorm", 5), ("hidden", 5, "tanh", 1.), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", .5), ("batchnorm", 100), ("hidden", 100, "relu", .5), ("output", 10, "softmax", 1.)]
-    # layer_info = [("hidden", 100, "relu", .5), ("hidden", 100, "relu", .5), ("output", 10, "softmax", 1.)]
-    layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
+    layer_info = [("hidden", 5, "relu", 1.), ("batchnorm", 5), ("hidden", 5, "relu", 1.), ("output", 10, "softmax", 1.)]
+    # layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
     nn = neural_net(train_x.shape[1], layer_info)
     nn.fit(train_x, train_y, val_x, val_y)

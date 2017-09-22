@@ -3,6 +3,7 @@ from sklearn.metrics import accuracy_score
 from utils import Progbar
 from optimizers import optimizer
 from Layers import DenseLayer, BatchNormLayer
+from copy import deepcopy
 np.random.seed(1234)
 
 

@@ -11,6 +11,8 @@ class optimizer(object):
         self.velocity = None
 
     def loss(self, y, output):
+        eps = np.finfo(float).eps
+        output += eps  # For numerical stability
         if self.loss_type == 'categorical_cross_entropy':
             loss = -1. * (y * np.log(output))
             loss_grad = (output - y)

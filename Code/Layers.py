@@ -75,7 +75,7 @@ class DenseLayer(object):
 
 
 class BatchNormLayer(object):
-    def __init__(self, n_dim, epsilon=0.001):
+    def __init__(self, n_dim, epsilon=0.001, alpha=0.9):
         self.n_dim = n_dim
         l_val = np.sqrt(6) / (np.sqrt(n_dim + n_dim))
         self.params = {"gamma": Variable(), "beta": Variable()}
@@ -86,6 +86,9 @@ class BatchNormLayer(object):
         self.buffers["batch_var"] = np.zeros((1, n_dim))
         self.sum_of_squares = np.zeros((1, n_dim))
         self.count = 0.
+        self.alpha = alpha
+        self.buffers["mu"] = np.zeros((1, n_dim))
+        self.buffers["var"] = np.zeros((1, n_dim))
         self.epsilon = epsilon
 
     def forward(self, input_tensor, test=False):
@@ -95,8 +98,12 @@ class BatchNormLayer(object):
         '''
         if not test:
             self.buffers["batch_mu"] = np.sum(input_tensor, axis=0) / input_tensor.shape[0]
-            # self.buffers["batch_var"] = np.sum((input_tensor - self.buffers["batch_mu"]) * (input_tensor - self.buffers["batch_mu"]), axis=0) / input_tensor.shape[0]
+            self.buffers["mu"] = self.alpha * self.buffers["mu"] + ((1. - self.alpha) * self.buffers["batch_mu"]) if self.buffers["mu"] is not None else self.buffers["batch_mu"]
             self.buffers["batch_var"] = (np.sum(input_tensor ** 2, axis=0) / input_tensor.shape[0]) - (self.buffers["batch_mu"] ** 2)
+            self.buffers["var"] = self.alpha * self.buffers["var"] + ((1. - self.alpha) * self.buffers["batch_var"]) if self.buffers["var"] is not None else self.buffers["batch_var"]
+        else:
+            self.buffers["batch_mu"] = self.buffers["mu"]
+            self.buffers["batch_var"] = self.buffers["var"]
         self.x_minus_mu = input_tensor - self.buffers["batch_mu"]
         self.var_plus_eps = self.buffers["batch_var"] + self.epsilon
         self.x_hat = self.x_minus_mu / np.sqrt(self.var_plus_eps)

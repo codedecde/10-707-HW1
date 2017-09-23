@@ -23,9 +23,15 @@ class DenseLayer(object):
         self.dropout = dropout
         if not hasattr(activations, activation):
             print "No support currently for activation %s. Defaulting to linear " % (activation)
-            self. activation = getattr(activations, 'linear')
+            self.activation = getattr(activations, 'linear')
         else:
             self.activation = getattr(activations, activation)
+
+        if not hasattr(activations, activation + '_grad'):
+            print "Warning %s activation not found. Defaulting to linear " % (self.activation.__name__)
+            self.gradient_function = getattr(activations, 'linear_grad')
+        else:
+            self.gradient_function = getattr(activations, activation + '_grad')
 
     def forward(self, input_tensor, test=False):
         '''
@@ -50,21 +56,7 @@ class DenseLayer(object):
             returns the gradient w.r.t current node
         '''
         # Step 1. Compute gradient wrt the activation
-        if self.activation.__name__ == "sigmoid":
-            activation_grad = output_gradient * self.activation(self.z) * (1. - self.activation(self.z))
-        elif self.activation.__name__ == "relu":
-            activation_grad = output_gradient
-            activation_grad[self.z < 0.] = 0.
-        elif self.activation.__name__ == "tanh":
-            activation_grad = output_gradient * (1. - (self.activation(self.z)**2))
-        elif self.activation.__name__ == "softmax":
-            # This is a special case. It is easier to precompute the gradient wrt the activation and send it below
-            activation_grad = output_gradient
-        elif self.activation.__name__ == "linear":
-            activation_grad = output_gradient
-        else:
-            print "Warning %s activation not found. Defaulting to linear " % (self.activation.__name__)
-            activation_grad = output_gradient
+        activation_grad = output_gradient * self.gradient_function(self.z)
         # Now compute the gradients of w and b and store those
         self.params["W"].grad = np.dot(self.input.transpose(), activation_grad) / output_gradient.shape[0]
         self.params["b"].grad = (np.sum(activation_grad, axis=0) / output_gradient.shape[0]).reshape(self.params["b"].value.shape)

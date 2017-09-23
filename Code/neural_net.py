@@ -5,7 +5,6 @@ from optimizers import SGD
 from Layers import DenseLayer, BatchNormLayer
 from copy import deepcopy
 import pdb
-np.random.seed(1234)
 
 
 class neural_net(object):

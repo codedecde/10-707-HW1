@@ -4,6 +4,7 @@ from utils import Progbar
 from optimizers import SGD
 from Layers import DenseLayer, BatchNormLayer
 from copy import deepcopy
+import cPickle as cp
 import pdb
 
 
@@ -12,6 +13,7 @@ class neural_net(object):
         self.layers_info = layers_info
         self.num_layers = len(layers_info)
         self.params = {}
+        self.save_prefix = opts.save_prefix
         for ix in xrange(len(layers_info)):
             if ix == 0:
                 input_dim = input_dims
@@ -36,6 +38,33 @@ class neural_net(object):
         back_grad = loss_grad
         for ix in xrange(self.num_layers - 1, -1, -1):
             back_grad = getattr(self, 'layer_{}'.format(ix)).backward(back_grad)
+
+    def save_params(self, filename):
+        params = {}
+        for layer in self.params:
+            params[layer] = {}
+            for param in self.params[layer]:
+                params[layer][param] = self.params[layer][param].value
+                if "batchnorm" in layer:
+                    params[layer]["buffers"] = {}
+                    index = int(layer.split('_')[-1])
+                    for buffer_key in getattr(self, 'layer_{}'.format(index)).buffers:
+                        params[layer]["buffers"][buffer_key] = getattr(self, 'layer_{}'.format(index)).buffers[buffer_key]
+        with open(filename, "wb") as f:
+            cp.dump(params, f)
+
+    def load_params(self, filename):
+        saved_params = cp.load(open(filename))
+        for layer in saved_params:
+            assert layer in self.params, "Tried to load layer %s, but layer not found" % (layer)
+            for param in saved_params[layer]:
+                if param == "buffers":
+                    assert "batchnorm" in layer, "Error. Only BatchNorm currently has registered params"
+                    index = int(layer.split('_')[-1])
+                    for buffer_key in saved_params[layer][param]:
+                        getattr(self, 'layer_{}'.format(index)).buffers[buffer_key] = saved_params[layer][param][buffer_key]
+                else:
+                    self.params[layer][param].value = saved_params[layer][param]
 
     def compute_numerical_grad(self, layer, param, i, j, X, y, eps=0.0001):
         original_params = deepcopy(self.params[layer][param].value)
@@ -77,6 +106,7 @@ class neural_net(object):
         bar = Progbar(n_epochs)
         if return_history:
             history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
+        best_val_acc = None
         for epoch in xrange(n_epochs):
             # Shuffle the training data
             index = np.arange(X_train.shape[0])
@@ -85,18 +115,20 @@ class neural_net(object):
             y = y_train[index]
             train_loss = 0.
             val_loss = 0.
-            losses = []
             for ix in xrange(0, X.shape[0], batch_size):
                 batch_x = X[ix: ix + batch_size]
                 batch_y = y[ix: ix + batch_size]
                 loss_train, loss_val = self.train_batch(batch_x, batch_y, X_val, y_val)
                 train_loss += loss_train * batch_x.shape[0]
                 val_loss += loss_val * batch_x.shape[0]
-                losses.append(loss_train)
             train_loss /= X.shape[0]
             val_loss /= X.shape[0]
             train_acc = accuracy_score(y_labels_train, self.predict(X_train))
             val_acc = accuracy_score(y_labels_val, self.predict(X_val))
+            if best_val_acc is None or val_acc > best_val_acc:
+                best_val_acc = val_acc
+                model_file = self.save_prefix + "acc_%.4f_epoch_%d" % (val_acc, epoch + 1)
+                self.save_params(model_file)
             if return_history:
                 history['train_loss'].append(train_loss)
                 history['val_loss'].append(val_loss)

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     momentum_low = 0.6
     momentum_high = 0.95
     opts = get_arguments()
-    models_per_unit = 1
+    models_per_unit = 5
     best_val_acc = None
     best_save_string = ''
     if num_layers == 1:
@@ -62,5 +62,5 @@ if __name__ == "__main__":
                 if best_val_acc is None or best_val_acc_model > best_val_acc:
                     best_val_acc = best_val_acc_model
                     best_save_string = model_save_prefix
-                cp.dump(history, open(data_dir + 'GridSearch/' +  history_file_name, 'wb'))
+                cp.dump(history, open(data_dir + 'GridSearch/' + history_file_name, 'wb'))
     print '\n\n Best Validation Accuracy Achieved : %.4f\nBy Model File\n%s\n' % (best_val_acc, best_save_string)

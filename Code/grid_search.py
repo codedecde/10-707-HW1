@@ -6,21 +6,21 @@ import cPickle as cp
 
 
 def build_strings(opts):
-    model_save_prefix = data_dir + 'Parameters/Model_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
-                                                                                                                                      opts.dropout,
-                                                                                                                                      opts.batch_size,
-                                                                                                                                      opts.l2,
-                                                                                                                                      opts.lr,
-                                                                                                                                      opts.momentum,
-                                                                                                                                      opts.activation)
-    history_file_name = data_dir + 'History/History_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
-                                                                                                                                                  opts.dropout,
-                                                                                                                                                  opts.batch_size,
-                                                                                                                                                  opts.l2,
-                                                                                                                                                  opts.lr,
-                                                                                                                                                  opts.momentum,
-                                                                                                                                                  opts.activation,
-                                                                                                                                                  opts.n_epochs)
+    model_save_prefix = 'Parameters/Model_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
+                                                                                                                           opts.dropout,
+                                                                                                                           opts.batch_size,
+                                                                                                                           opts.l2,
+                                                                                                                           opts.lr,
+                                                                                                                           opts.momentum,
+                                                                                                                           opts.activation)
+    history_file_name = 'History/History_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
+                                                                                                                                       opts.dropout,
+                                                                                                                                       opts.batch_size,
+                                                                                                                                       opts.l2,
+                                                                                                                                       opts.lr,
+                                                                                                                                       opts.momentum,
+                                                                                                                                       opts.activation,
+                                                                                                                                       opts.n_epochs)
     return model_save_prefix, history_file_name
 
 

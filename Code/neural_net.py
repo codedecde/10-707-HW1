@@ -76,7 +76,7 @@ class neural_net(object):
         y_labels_train = np.argmax(y_train, axis=-1)
         bar = Progbar(n_epochs)
         if return_history:
-            history = {'train_loss':[], 'val_loss':[], 'train_acc':[], 'val_acc':[]}
+            history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
         for epoch in xrange(n_epochs):
             # Shuffle the training data
             index = np.arange(X_train.shape[0])
@@ -108,4 +108,3 @@ class neural_net(object):
                                           ("val_acc", val_acc)])
         if return_history:
             return history
-

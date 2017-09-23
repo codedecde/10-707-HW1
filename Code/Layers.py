@@ -20,7 +20,7 @@ class DenseLayer(object):
         self.params = {"W": Variable(), "b": Variable()}
         self.params["W"].value = np.random.uniform(low=-l_val, high=l_val, size=(input_dim, output_dim))
         self.params["b"].value = np.ones((1, output_dim))
-        self.dropout = dropout
+        self.dropout = min(1., max(dropout, 0.))  # Humans are stupid
         if not hasattr(activations, activation):
             print "No support currently for activation %s. Defaulting to linear " % (activation)
             self.activation = getattr(activations, 'linear')
@@ -42,10 +42,11 @@ class DenseLayer(object):
         self.input = input_tensor
         self.z = np.dot(input_tensor, self.params["W"].value) + self.params["b"].value  # batch_size x output_dim
         a = self.activation(self.z)
-        if test:
-            a = a * self.dropout
-        else:
-            mask = np.random.binomial(1, self.dropout, a.shape)
+        if not test and self.dropout != 0.:
+            '''
+                Implementing inverted dropout, as is standard practice.
+            '''
+            mask = np.random.binomial(1, self.dropout, self.z.shape) / (self.dropout)
             a *= mask
         return a
 

@@ -8,6 +8,7 @@ class SGD(object):
         self.lr = lr
         self.l2_penalty = l2_penalty
         self.momentum = momentum
+        self.batch_size = 1.
         self.velocity = None
 
     def loss(self, y, output):
@@ -26,7 +27,8 @@ class SGD(object):
             print "Error %s not supported. Reverting to categorical_cross_entropy" % (self.loss_type)
             loss = -1. * (y * np.log(output))
             loss_grad = (output - y)
-        loss = np.sum(np.sum(loss)) / y.shape[0]
+        self.batch_size = y.shape[0]
+        loss = np.sum(np.sum(loss)) / self.batch_size
         return loss, loss_grad
 
     def zero_grads(self):
@@ -41,7 +43,7 @@ class SGD(object):
                 self.velocity[name] = {}
                 for weight in self.params[name]:
                     if weight != 'b':
-                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
+                        gradient = self.lr * (self.params[name][weight].grad + ((self.l2_penalty / self.batch_size) * self.params[name][weight].value))
                         self.velocity[name][weight] = gradient
                         self.params[name][weight].value -= self.velocity[name][weight]
                     else:
@@ -52,7 +54,7 @@ class SGD(object):
             for name in self.params:
                 for weight in self.params[name]:
                     if weight != 'b':
-                        gradient = ((self.lr * self.params[name][weight].grad) + (self.l2_penalty * self.params[name][weight].value))
+                        gradient = self.lr * (self.params[name][weight].grad + ((self.l2_penalty / self.batch_size) * self.params[name][weight].value))
                         self.velocity[name][weight] = (self.momentum * self.velocity[name][weight]) + gradient
                         self.params[name][weight].value -= self.velocity[name][weight]
                     else:

@@ -105,7 +105,7 @@ class neural_net(object):
         y_labels_train = np.argmax(y_train, axis=-1)
         bar = Progbar(n_epochs)
         if return_history:
-            history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
+            history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'best_val_acc': None, 'Model_Save_Prefix': self.save_prefix}
         best_val_acc = None
         for epoch in xrange(n_epochs):
             # Shuffle the training data
@@ -139,4 +139,5 @@ class neural_net(object):
                                           ("train_acc", train_acc),
                                           ("val_acc", val_acc)])
         if return_history:
+            history['best_val_acc'] = best_val_acc
             return history

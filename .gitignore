@@ -1,4 +1,5 @@
 Code/Data/*
 *.pyc
-History/*
-Parameters/*
+Code/History/*
+Code/Parameters/*
+Code/Plots/*

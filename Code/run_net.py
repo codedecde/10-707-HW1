@@ -45,8 +45,9 @@ def get_arguments():
 
 if __name__ == "__main__":
     opts = get_arguments()
-    train_file = "Data/digitstrain.txt"
-    val_file = "Data/digitsvalid.txt"
+    data_dir = "/home/bass/DataDir/10-707/HW1/"
+    train_file = data_dir + "Data/digitstrain.txt"
+    val_file = data_dir + "Data/digitsvalid.txt"
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
     layer_info = [("hidden", opts.n_hidden, opts.activation, opts.dropout), ("output", 10, "softmax", 1.)]
@@ -66,4 +67,5 @@ if __name__ == "__main__":
                                                                                                                                opts.momentum,
                                                                                                                                opts.activation,
                                                                                                                                opts.n_epochs)
-    cp.dump(history, open('History/' + history_file_name, 'wb'))
+    history_file_name = data_dir + 'History/' + history_file_name
+    cp.dump(history, open(history_file_name, 'wb'))

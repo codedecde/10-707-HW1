@@ -115,12 +115,14 @@ class Progbar(object):
         values = values or []
         for k, v in values:
             if k not in self.sum_values:
-                self.sum_values[k] = [v * (current - self.seen_so_far),
-                                      current - self.seen_so_far]
+                # self.sum_values[k] = [v * (current - self.seen_so_far),
+                #                       current - self.seen_so_far]
+                self.sum_values[k] = v
                 self.unique_values.append(k)
             else:
-                self.sum_values[k][0] += v * (current - self.seen_so_far)
-                self.sum_values[k][1] += (current - self.seen_so_far)
+                # self.sum_values[k][0] += v * (current - self.seen_so_far)
+                # self.sum_values[k][1] += (current - self.seen_so_far)
+                self.sum_values[k] = v
         self.seen_so_far = current
 
         now = time.time()
@@ -169,7 +171,10 @@ class Progbar(object):
                     else:
                         info += ' %.4e' % avg
                 else:
-                    info += ' %s' % self.sum_values[k]
+                    if abs(self.sum_values[k]) > 1e-3:
+                        info += ' %.4f' % self.sum_values[k]
+                    else:
+                        info += ' %.4e' % self.sum_values[k]
 
             self.total_width += len(info)
             if prev_total_width > self.total_width:

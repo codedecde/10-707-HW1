@@ -85,14 +85,12 @@ class neural_net(object):
             y = y_train[index]
             train_loss = 0.
             val_loss = 0.
-            losses = []
             for ix in xrange(0, X.shape[0], batch_size):
                 batch_x = X[ix: ix + batch_size]
                 batch_y = y[ix: ix + batch_size]
                 loss_train, loss_val = self.train_batch(batch_x, batch_y, X_val, y_val)
                 train_loss += loss_train * batch_x.shape[0]
                 val_loss += loss_val * batch_x.shape[0]
-                losses.append(loss_train)
             train_loss /= X.shape[0]
             val_loss /= X.shape[0]
             train_acc = accuracy_score(y_labels_train, self.predict(X_train))

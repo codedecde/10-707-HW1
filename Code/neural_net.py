@@ -1,9 +1,10 @@
 import numpy as np
 from sklearn.metrics import accuracy_score
 from utils import Progbar
-from optimizers import optimizer
+from optimizers import SGD
 from Layers import DenseLayer, BatchNormLayer
 from copy import deepcopy
+import cPickle as cp
 import pdb
 np.random.seed(1234)
 
@@ -16,6 +17,7 @@ class neural_net(object):
         self.layers_info = layers_info
         self.num_layers = len(layers_info)
         self.params = {}
+        self.save_prefix = opts.save_prefix
         for ix in xrange(len(layers_info)):
             if ix == 0:
                 input_dim = input_dims
@@ -28,7 +30,7 @@ class neural_net(object):
                 layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0] + "_{}".format(ix)] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
-        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=opts.lr, l2_penalty=opts.l2)
+        self.optimizer = SGD(self.params, 'categorical_cross_entropy', lr=opts.lr, l2_penalty=opts.l2)
 
     def forward(self, input_tensor, test=False):
         output = input_tensor

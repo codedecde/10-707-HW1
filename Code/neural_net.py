@@ -62,10 +62,10 @@ class neural_net(object):
                 max_abs_difference = max(abs_difference, max_abs_difference)
         return max_abs_difference
 
-    def train_batch(self, X, y):
+    def train_batch(self, X_train, y_train):
         self.optimizer.zero_grads()
-        output = self.forward(X)
-        loss, loss_grad = self.optimizer.loss(y, output)
+        output = self.forward(X_train)
+        loss, loss_grad = self.optimizer.loss(y_train, output)
         self.backward(loss_grad)
         # print self.test_layer_gradient('hidden_0', 'b', X, y)
         self.optimizer.step()
@@ -77,7 +77,7 @@ class neural_net(object):
         return output
 
     def fit(self, X_train, y_train, X_val, y_val, n_epochs=200, batch_size=32, return_history=False):
-        y_val = np.argmax(y_val, axis=-1)
+        y_val_labels = np.argmax(y_val, axis=-1)
         bar = Progbar(n_epochs)
         for epoch in xrange(n_epochs):
             # Shuffle the training data
@@ -90,9 +90,10 @@ class neural_net(object):
                 batch_x = X[ix: ix + batch_size]
                 batch_y = y[ix: ix + batch_size]
                 loss = self.train_batch(batch_x, batch_y)
+                loss_val, _ = self.optimizer.loss(y_val, self.forward(X_val, test=True))
                 losses.append(loss)
             preds = self.predict(X_val)
-            bar.update(epoch + 1, values=[("mean_training_loss", sum(losses) / len(losses)), ("val_acc", accuracy_score(y_val, preds))])
+            bar.update(epoch + 1, values=[("mean_training_loss", sum(losses) / len(losses)), ("val_acc", accuracy_score(y_val_labels, preds))])
 
 
 def get_x_y(data_array):

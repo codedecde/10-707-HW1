@@ -6,7 +6,9 @@ def sigmoid(x):
 
 
 def sigmoid_grad(x):
-    return sigmoid(x) * (1. - sigmoid(x))
+    sigmoid_grad = sigmoid(x)
+    sigmoid_grad = sigmoid_grad * (1. - sigmoid_grad)
+    return sigmoid_grad
 
 
 def tanh(x):

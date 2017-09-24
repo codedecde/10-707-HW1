@@ -117,9 +117,10 @@ class neural_net(object):
                 batch_y = y[ix: ix + batch_size]
                 loss_train = self.train_batch(batch_x, batch_y)
                 train_loss += loss_train * batch_x.shape[0]
-            val_loss, _ = self.optimizer.loss(y_val, self.forward(X_val, test=True))
             train_loss /= X.shape[0]
             train_acc = accuracy_score(y_labels_train, self.predict(X_train))
+            # Computing Validation Metrics
+            val_loss, _ = self.optimizer.loss(y_val, self.forward(X_val, test=True))
             val_acc = accuracy_score(y_labels_val, self.predict(X_val))
             if best_val_acc is None or val_acc > best_val_acc:
                 best_val_acc = val_acc

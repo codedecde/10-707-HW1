@@ -85,15 +85,13 @@ class neural_net(object):
                 max_abs_difference = max(abs_difference, max_abs_difference)
         return max_abs_difference
 
-    def train_batch(self, X, y, X_val, y_val):
+    def train_batch(self, X, y):
         self.optimizer.zero_grads()
-        output = self.forward(X)
-        loss, loss_grad = self.optimizer.loss(y, output)
+        loss, loss_grad = self.optimizer.loss(y, self.forward(X))
         self.backward(loss_grad)
         # print self.test_layer_gradient('hidden_0', 'b', X, y)
         self.optimizer.step()
-        loss_val, _ = self.optimizer.loss(y_val, self.forward(X_val))
-        return loss, loss_val
+        return loss
 
     def predict(self, X):
         output = self.forward(X, test=True)
@@ -114,15 +112,13 @@ class neural_net(object):
             X = X_train[index]
             y = y_train[index]
             train_loss = 0.
-            val_loss = 0.
             for ix in xrange(0, X.shape[0], batch_size):
                 batch_x = X[ix: ix + batch_size]
                 batch_y = y[ix: ix + batch_size]
-                loss_train, loss_val = self.train_batch(batch_x, batch_y, X_val, y_val)
+                loss_train = self.train_batch(batch_x, batch_y)
                 train_loss += loss_train * batch_x.shape[0]
-                val_loss += loss_val * batch_x.shape[0]
+            val_loss, _ = self.optimizer.loss(y_val, self.forward(X_val, test=True))
             train_loss /= X.shape[0]
-            val_loss /= X.shape[0]
             train_acc = accuracy_score(y_labels_train, self.predict(X_train))
             val_acc = accuracy_score(y_labels_val, self.predict(X_val))
             if best_val_acc is None or val_acc > best_val_acc:

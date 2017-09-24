@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class optimizer(object):
+class SGD(object):
     def __init__(self, params, loss_type, lr=0.001, l2_penalty=0., momentum=0.):
         self.params = params
         self.loss_type = loss_type

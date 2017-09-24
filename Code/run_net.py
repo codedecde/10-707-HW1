@@ -57,22 +57,22 @@ if __name__ == "__main__":
     # layer_info = [("hidden", 100, "relu", .5), ("batchnorm", 100), ("hidden", 100, "relu", .5), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 1.), ("batchnorm", 100), ("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
-    # model_save_prefix = 'Parameters/Model_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
-    #                                                                                                                        opts.dropout,
-    #                                                                                                                        opts.batch_size,
-    #                                                                                                                        opts.l2,
-    #                                                                                                                        opts.lr,
-    #                                                                                                                        opts.momentum,
-    #                                                                                                                        opts.activation)
-    # opts.save_prefix = model_save_prefix if opts.save_prefix == "" else opts.save_prefix
+    model_save_prefix = 'Parameters/Model_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
+                                                                                                                           opts.dropout,
+                                                                                                                           opts.batch_size,
+                                                                                                                           opts.l2,
+                                                                                                                           opts.lr,
+                                                                                                                           opts.momentum,
+                                                                                                                           opts.activation)
+    opts.save_prefix = model_save_prefix if opts.save_prefix == "" else opts.save_prefix
     nn = neural_net(train_x.shape[1], layer_info, opts)
     history = nn.fit(train_x, train_y, val_x, val_y, n_epochs=opts.n_epochs, batch_size=opts.batch_size, return_history=True)
-    # history_file_name = 'History_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
-    #                                                                                                                            opts.dropout,
-    #                                                                                                                            opts.batch_size,
-    #                                                                                                                            opts.l2,
-    #                                                                                                                            opts.lr,
-    #                                                                                                                            opts.momentum,
-    #                                                                                                                            opts.activation,
-    #                                                                                                                            opts.n_epochs)
+    history_file_name = 'History_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
+                                                                                                                               opts.dropout,
+                                                                                                                               opts.batch_size,
+                                                                                                                               opts.l2,
+                                                                                                                               opts.lr,
+                                                                                                                               opts.momentum,
+                                                                                                                               opts.activation,
+                                                                                                                               opts.n_epochs)
     # cp.dump(history, open('History/' + history_file_name, 'wb'))

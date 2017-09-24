@@ -41,10 +41,8 @@ class DenseLayer(object):
         self.input = input_tensor
         self.z = np.dot(input_tensor, self.params["W"].value) + self.params["b"].value  # batch_size x output_dim
         a = self.activation(self.z)
-        if test:
-            a = a * self.dropout
-        else:
-            mask = np.random.binomial(1, self.dropout, a.shape)
+        if not test and self.dropout != 0:
+            mask = np.random.binomial(1, self.dropout, a.shape) / (self.dropout)
             a *= mask
         return a
 

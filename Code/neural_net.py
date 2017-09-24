@@ -12,7 +12,7 @@ DEBUG = False
 
 
 class neural_net(object):
-    def __init__(self, input_dims, layers_info):
+    def __init__(self, input_dims, layers_info, opts):
         self.layers_info = layers_info
         self.num_layers = len(layers_info)
         self.params = {}
@@ -22,13 +22,13 @@ class neural_net(object):
             else:
                 input_dim = layers_info[ix - 1][1]
             output_dim = layers_info[ix][1]
-            if layer_info[ix][0] != "batchnorm":
-                layer_object = DenseLayer(input_dim, output_dim, layers_info[ix][2], dropout=layer_info[ix][3])
+            if layers_info[ix][0] != "batchnorm":
+                layer_object = DenseLayer(input_dim, output_dim, layers_info[ix][2], dropout=layers_info[ix][3])
             else:
                 layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0] + "_{}".format(ix)] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
-        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=0.1, l2_penalty=0)
+        self.optimizer = optimizer(self.params, 'categorical_cross_entropy', lr=opts.lr, l2_penalty=opts.l2)
 
     def forward(self, input_tensor, test=False):
         output = input_tensor
@@ -74,15 +74,15 @@ class neural_net(object):
         output = np.argmax(output, axis=-1)
         return output
 
-    def fit(self, X, y, X_val, y_val, n_epochs=200, batch_size=32):
+    def fit(self, X_train, y_train, X_val, y_val, n_epochs=200, batch_size=32, return_history=False):
         y_val = np.argmax(y_val, axis=-1)
         bar = Progbar(n_epochs)
         for epoch in xrange(n_epochs):
             # Shuffle the training data
-            index = np.arange(X.shape[0])
+            index = np.arange(X_train.shape[0])
             np.random.shuffle(index)
-            X = X[index]
-            y = y[index]
+            X = X_train[index]
+            y = y_train[index]
             losses = []
             for ix in xrange(0, X.shape[0], batch_size):
                 batch_x = X[ix: ix + batch_size]

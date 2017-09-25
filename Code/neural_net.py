@@ -26,7 +26,7 @@ class neural_net(object):
                 layer_object = BatchNormLayer(input_dim)
             self.params[layers_info[ix][0] + "_{}".format(ix)] = layer_object.params
             setattr(self, 'layer_{}'.format(ix), layer_object)
-        self.optimizer = SGD(self.params, 'categorical_cross_entropy', lr=opts.lr, l2_penalty=opts.l2)
+        self.optimizer = SGD(self.params, 'categorical_cross_entropy', lr=opts.lr, l2_penalty=opts.l2, momentum=opts.momentum)
 
     def forward(self, input_tensor, test=False):
         output = input_tensor

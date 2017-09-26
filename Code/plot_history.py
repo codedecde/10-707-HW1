@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import pdb
 
 ######################################################
-# LOAD THE HISTORY 
-history_file = 'History/History_hidden_100_dropout_1.00_batch_32_l2_0.0000_lr_0.100_momentum_0.000_activation_sigmoid_epochs_500.pkl'
+# LOAD THE HISTORY
+history_file = 'History/History_hidden_200_dropout_1.00_batch_32_l2_0.0052_lr_0.500_momentum_0.916_activation_sigmoid_epochs_500.pkl'
 history = cp.load(open(history_file))
 #######################################################
 
@@ -21,7 +21,7 @@ plt.xlabel('Epochs')
 plt.ylabel('Cross Entropy Error')
 plt.title('Entropy Error vs Epochs')
 plt.legend([train_loss, val_loss], ["Training Entropy Loss", "Validation Entropy Loss"])
-plt.savefig('Plots/Entropy_loss.png')
+plt.savefig('Plots/Entropy_loss_best_single_layer_model.png')
 plt.close()
 ########################################################
 
@@ -35,26 +35,27 @@ plt.xlabel('Epochs')
 plt.ylabel('Classification Error')
 plt.title('Classification Error vs Epochs')
 plt.legend([train_acc, val_acc], ["Training Classification Loss", "Validation Classification Loss"])
-plt.savefig('Plots/Classification_loss.png')
+plt.savefig('Plots/Classification_loss_best_single_layer_model.png')
 plt.close()
 ########################################################
 
 ########################################################
 # Plot the weights of the best model
-model_file = 'Parameters/Model_hidden_100_dropout_1.00_batch_32_l2_0.0000_lr_0.100_momentum_0.000_activation_sigmoid_acc_0.9140_epoch_302'
+model_file = 'Parameters/Model_hidden_100_dropout_1.00_batch_32_l2_0.0093_lr_0.500_momentum_0.464_activation_sigmoid_acc_0.9310_epoch_380'
 params = cp.load(open(model_file))
 weights = params['hidden_0']['W']  # 784 x 100
 cols = int(np.sqrt(weights.shape[1]))
 rows = (weights.shape[1] // cols) if (weights.shape[1] % cols == 0) else (weights.shape[1] // cols) + 1
 fig, axes = plt.subplots(nrows=rows, ncols=cols)
 fig.suptitle('Weights %d x %d' % (weights.shape))
+index = 0
 for row_ix, row in enumerate(axes):
     for col_ix, ax in enumerate(row):
-        index = (row_ix * col_ix) + col_ix
         if index >= weights.shape[1]:
             ax.imshow(np.zeros((28, 28)), cmap='gray')
         else:
             ax.imshow(weights[:, index].reshape((28, 28)), cmap='gray')
+        index += 1
         ax.set_xticks([])
         ax.set_yticks([])
-plt.savefig('Plots/Weights.png')
+plt.savefig('Plots/WeightsSingle_2.png')

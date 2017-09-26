@@ -33,10 +33,10 @@ def get_arguments():
     parser.add_argument('-batch', action="store", default=32, dest="batch_size", type=int)
     parser.add_argument('-dropout', action="store", default=1.0, dest="dropout", type=float)
     parser.add_argument('-l2', action="store", default=0.000, dest="l2", type=float)
-    parser.add_argument('-lr', action="store", default=0.1, dest="lr", type=float)
-    parser.add_argument('-momentum', action="store", default=0.0, dest="momentum", type=float)
-    parser.add_argument('-activation', action="store", default="sigmoid", dest="activation", type=str)
-    parser.add_argument('-n_epochs', action="store", default=200, dest="n_epochs", type=int)
+    parser.add_argument('-lr', action="store", default=0.5, dest="lr", type=float)
+    parser.add_argument('-momentum', action="store", default=0.5, dest="momentum", type=float)
+    parser.add_argument('-activation', action="store", default="relu", dest="activation", type=str)
+    parser.add_argument('-n_epochs', action="store", default=500, dest="n_epochs", type=int)
     parser.add_argument('-save_prefix', action="store", default="", dest="save_prefix", type=str)
     # Using strings as a proxy for boolean flags. Checks happen later
     args = parser.parse_args(sys.argv[1:])
@@ -45,36 +45,52 @@ def get_arguments():
 
 
 if __name__ == "__main__":
+    # Parameters/Model_hidden1_500_hidden2_200_l2_0.0089_lr_0.500_momentum_0.832
     opts = get_arguments()
     data_dir = "/home/bass/DataDir/10-707/HW1/"
     train_file = data_dir + "Data/digitstrain.txt"
     val_file = data_dir + "Data/digitsvalid.txt"
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
-    layer_info = [("hidden", opts.n_hidden, opts.activation, opts.dropout), ("output", 10, "softmax", 1.)]
+    # layer_info = [("batchnorm", train_x.shape[1]), ("hidden", opts.n_hidden, opts.activation, opts.dropout), ("batchnorm", opts.n_hidden), ("hidden", 200, opts.activation, opts.dropout), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 0.5), ("batchnorm", 100, "", 0.), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "tanh", .5), ("batchnorm", 100), ("hidden", 100, "tanh", .5), ("batchnorm", 100), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 5, "relu", 1.), ("batchnorm", 5), ("hidden", 5, "tanh", 1.), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", .5), ("batchnorm", 100), ("hidden", 100, "relu", .5), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 1.), ("batchnorm", 100), ("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
     # layer_info = [("hidden", 100, "relu", 1.), ("output", 10, "softmax", 1.)]
-    model_save_prefix = data_dir + 'Parameters/Model_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
-                                                                                                                                      opts.dropout,
-                                                                                                                                      opts.batch_size,
-                                                                                                                                      opts.l2,
-                                                                                                                                      opts.lr,
-                                                                                                                                      opts.momentum,
-                                                                                                                                      opts.activation)
+    # model_save_prefix = data_dir + 'ActivationsL2/' + 'Parameters/Model_batchnorm_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_' % (opts.n_hidden,
+    #                                                                                                                                                              opts.dropout,
+    #                                                                                                                                                              opts.batch_size,
+    #                                                                                                                                                              opts.l2,
+    #                                                                                                                                                              opts.lr,
+    #                                                                                                                                                              opts.momentum,
+    #                                                                                                                                                              opts.activation)
+    unit_1 = 200
+    unit_2 = 200
+    layer_info = [("hidden", unit_1, opts.activation, opts.dropout), ("hidden", unit_2, opts.activation, opts.dropout), ("output", 10, "softmax", 1.)]
+    model_save_prefix = data_dir + 'GridSearch2LayerBatchNorm/' + 'Parameters/Model_hidden1_%d_hidden2_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s' % (unit_1,
+                                                                                                  unit_2,
+                                                                                                  opts.l2,
+                                                                                                  opts.lr,
+                                                                                                  opts.momentum,
+                                                                                                  opts.activation)
+    history_file_name = 'History_hidden1_%d_hidden2_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s.pkl' % (unit_1,
+                                                                                                     unit_2,
+                                                                                                     opts.l2,
+                                                                                                     opts.lr,
+                                                                                                     opts.momentum,
+                                                                                                     opts.activation)
     opts.save_prefix = model_save_prefix if opts.save_prefix == "" else opts.save_prefix
     nn = neural_net(train_x.shape[1], layer_info, opts)
     history = nn.fit(train_x, train_y, val_x, val_y, n_epochs=opts.n_epochs, batch_size=opts.batch_size, return_history=True)
-    history_file_name = 'History_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
-                                                                                                                               opts.dropout,
-                                                                                                                               opts.batch_size,
-                                                                                                                               opts.l2,
-                                                                                                                               opts.lr,
-                                                                                                                               opts.momentum,
-                                                                                                                               opts.activation,
-                                                                                                                               opts.n_epochs)
-    history_file_name = data_dir + 'History/' + history_file_name
+    # history_file_name = 'History_batchnorm_hidden_%d_dropout_%.2f_batch_%d_l2_%.4f_lr_%.3f_momentum_%.3f_activation_%s_epochs_%d.pkl' % (opts.n_hidden,
+    #                                                                                                                                      opts.dropout,
+    #                                                                                                                                      opts.batch_size,
+    #                                                                                                                                      opts.l2,
+    #                                                                                                                                      opts.lr,
+    #                                                                                                                                      opts.momentum,
+    #                                                                                                                                      opts.activation,
+    #                                                                                                                                      opts.n_epochs)
+    history_file_name = data_dir + 'ActivationsL2/' + 'History/' + history_file_name
     cp.dump(history, open(history_file_name, 'wb'))

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     num_layers = 2
     l2_low = 0.00001
     l2_high = 0.01
-    momentum_low = 0.6
+    momentum_low = 0.4
     momentum_high = 0.95
     opts = get_arguments()
     models_per_unit = 4
@@ -55,21 +55,21 @@ if __name__ == "__main__":
                 print_string += "\nMomentum %.3f" % (opts.momentum)
                 print print_string
                 model_save_prefix, history_file_name = build_strings(opts)
-                opts.save_prefix = data_dir + 'GridSearch/' + model_save_prefix
+                opts.save_prefix = data_dir + 'GridSearchV2/' + model_save_prefix
                 nnet = nn.neural_net(train_x.shape[1], layer_info, opts)
                 history = nnet.fit(train_x, train_y, val_x, val_y, n_epochs=opts.n_epochs, batch_size=opts.batch_size, return_history=True)
                 best_val_acc_model = history['best_val_acc']
                 if best_val_acc is None or best_val_acc_model > best_val_acc:
                     best_val_acc = best_val_acc_model
                     best_save_string = model_save_prefix
-                cp.dump(history, open(data_dir + 'GridSearch/' + history_file_name, 'wb'))
+                cp.dump(history, open(data_dir + 'GridSearchV2/' + history_file_name, 'wb'))
     else:
         for ix in xrange(len(layer_units)):
             unit_1 = layer_units[ix]
             for jx in xrange(ix + 1):
                 unit_2 = layer_units[jx]
                 opts.n_hidden = unit_1
-                layers_info = [('hidden', unit_1, opts.activation, 1.), ('hidden', unit_2, opts.activation, 1.), ("output", 10, "softmax", 1.)]
+                layers_info = [("batchnorm", train_x.shape[1]), ('hidden', unit_1, opts.activation, 1.), ("batchnorm", opts.activation), ('hidden', unit_2, opts.activation, 1.), ("output", 10, "softmax", 1.)]
                 for _ in xrange(models_per_unit):
                     opts.lr = random.choice(lr_values)
                     opts.l2 = float(format(np.random.uniform(low=l2_low, high=l2_high), '.5f'))
@@ -90,12 +90,12 @@ if __name__ == "__main__":
                                                                                                                      opts.l2,
                                                                                                                      opts.lr,
                                                                                                                      opts.momentum)
-                    opts.save_prefix = data_dir + 'GridSearch2Layer/' + model_save_prefix
+                    opts.save_prefix = data_dir + 'GridSearch2LayerBatchNorm/' + model_save_prefix
                     nnet = nn.neural_net(train_x.shape[1], layers_info, opts)
                     history = nnet.fit(train_x, train_y, val_x, val_y, n_epochs=opts.n_epochs, batch_size=opts.batch_size, return_history=True)
                     best_val_acc_model = history['best_val_acc']
                     if best_val_acc is None or best_val_acc_model > best_val_acc:
                         best_val_acc = best_val_acc_model
                         best_save_string = model_save_prefix
-                    cp.dump(history, open(data_dir + 'GridSearch2Layer/' + history_file_name, 'wb'))
+                    cp.dump(history, open(data_dir + 'GridSearch2LayerBatchNorm/' + history_file_name, 'wb'))
     print '\n\n Best Validation Accuracy Achieved : %.4f\nBy Model File\n%s\n' % (best_val_acc, best_save_string)

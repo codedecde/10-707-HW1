@@ -38,6 +38,8 @@ def get_arguments():
     parser.add_argument('-activation', action="store", default="sigmoid", dest="activation", type=str)
     parser.add_argument('-n_epochs', action="store", default=200, dest="n_epochs", type=int)
     parser.add_argument('-save_prefix', action="store", default="", dest="save_prefix", type=str)
+    parser.add_argument('-train_file', action="store", default="Data/digitstrain.txt", dest="train_file", type=str)
+    parser.add_argument('-val_file', action="store", default="Data/digitsvalid.txt", dest="val_file", type=str)
     # Using strings as a proxy for boolean flags. Checks happen later
     args = parser.parse_args(sys.argv[1:])
     # Checks for the boolean flags
@@ -46,8 +48,8 @@ def get_arguments():
 
 if __name__ == "__main__":
     opts = get_arguments()
-    train_file = "Data/digitstrain.txt"
-    val_file = "Data/digitsvalid.txt"
+    train_file = opts.train_file
+    val_file = opts.val_file
     train_x, train_y = get_x_y(np.genfromtxt(train_file, delimiter=","))
     val_x, val_y = get_x_y(np.genfromtxt(val_file, delimiter=","))
     layer_info = [("hidden", opts.n_hidden, opts.activation, opts.dropout), ("output", 10, "softmax", 1.)]
